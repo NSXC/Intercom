@@ -43,31 +43,23 @@ void clientHandler(SOCKET clientSocket) {
         } else if (action == "UNSUBSCRIBE") {
             subscribers[data].erase(clientSocket);
         } else if (action == "PUBLISH") {
-            // Assuming data format: "action_name:message_body"
             size_t colonPos = data.find(':');
             if (colonPos != std::string::npos) {
                 std::string actionName = data.substr(0, colonPos);
                 std::string messageBody = data.substr(colonPos + 1);
 
-                // Store message in the queue
                 queues[actionName].push_back({clientSocket, messageBody});
-
-                // Store the message in persistent storage
                 persistentStorage[actionName].push_back(messageBody);
             }
         } else if (action == "CONSUME") {
             if (queues[data].empty()) {
-                // Send a message to indicate the queue is empty
                 send(clientSocket, "QUEUE_EMPTY", 11, 0);
             } else {
-                // Send the oldest message from the queue
                 std::pair<SOCKET, std::string> message = queues[data].front();
                 queues[data].pop_back();
                 send(clientSocket, message.second.c_str(), message.second.length(), 0);
             }
         } else if (action == "ACKNOWLEDGE") {
-            // Handle message acknowledgment
-            // Here, you can remove acknowledged messages from persistent storage
             std::string actionName = data;
             auto it = std::find_if(persistentStorage[actionName].begin(), persistentStorage[actionName].end(),
                 [&clientSocket](const std::string& msg) {
